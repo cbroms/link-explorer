@@ -1,5 +1,3 @@
-const puppeteer = require("puppeteer");
-
 const getDomain = (location) => {
   const hostname = new URL(location).hostname;
   if (hostname === null || hostname === "") return null;
@@ -7,7 +5,7 @@ const getDomain = (location) => {
   return `${parts[parts.length - 2]}.${parts[parts.length - 1]}`;
 };
 
-const scrapeLinks = async (page, location, visitedDomains) => {
+const scrapeLinks = async (socket, page, location, visitedDomains) => {
   try {
     const thisLinkDomain = getDomain(location);
     if (thisLinkDomain === null) throw new Error("Bad location");
@@ -26,7 +24,14 @@ const scrapeLinks = async (page, location, visitedDomains) => {
     const settledDomain = getDomain(settledLocation);
     visitedDomains.add(settledDomain);
 
-    //await page.screenshot({ path: "example.png" });
+    const buf = await page.screenshot({ encoding: "base64" });
+    // send the page screenshot to the client
+    socket.emit("image", {
+      image: true,
+      buffer: buf.toString("base64"),
+      url: settledLocation,
+    });
+
     // get all the links on the page
     const hrefs = await page.$$eval("a", (links) =>
       links.map((link) => link.href)
@@ -41,17 +46,23 @@ const scrapeLinks = async (page, location, visitedDomains) => {
         !visitedDomains.has(linkDomain)
       );
     });
-    return filteredHrefs;
+    // remove dupes
+    return [...new Set(filteredHrefs)];
   } catch {
     // something went wrong
     return [];
   }
 };
 
-const maxDepth = 2;
-const start = "https://www.molleindustria.org/";
+const maxDepth = 1;
 
-const recursivelyScrape = async (browser, location, visitedDomains, depth) => {
+const recursivelyScrape = async (
+  socket,
+  browser,
+  location,
+  visitedDomains,
+  depth
+) => {
   if (depth > maxDepth) return;
   else {
     const thisLocationDomain = getDomain(location);
@@ -61,7 +72,7 @@ const recursivelyScrape = async (browser, location, visitedDomains, depth) => {
 
     // scape the links from the page
     const page = await browser.newPage();
-    const links = await scrapeLinks(page, location, visitedDomains);
+    const links = await scrapeLinks(socket, page, location, visitedDomains);
     console.log(`links from ${location}:`);
     console.log(links);
     console.log(`found ${links.length}`);
@@ -71,16 +82,19 @@ const recursivelyScrape = async (browser, location, visitedDomains, depth) => {
 
     // for each valid link, recursively scrape it
     const scrapers = links.map((link) => {
-      return recursivelyScrape(browser, link, visitedDomains, depth + 1);
+      return recursivelyScrape(
+        socket,
+        browser,
+        link,
+        visitedDomains,
+        depth + 1
+      );
     });
 
     return await Promise.allSettled(scrapers);
   }
 };
 
-(async () => {
-  const browser = await puppeteer.launch();
-  const visitedDomains = new Set();
-  const results = await recursivelyScrape(browser, start, visitedDomains, 0);
-  await browser.close();
-})();
+module.exports = {
+  recursivelyScrape,
+};

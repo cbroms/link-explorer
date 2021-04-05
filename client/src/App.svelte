@@ -1,35 +1,32 @@
 <script>
   import { onMount } from "svelte";
   import { io } from "socket.io-client";
+  import Search from "./components/Search.svelte";
 
   export let backend;
 
-  let locationToScrape = "";
-  let error = "";
+  let images = [];
 
   let socket = { connected: false };
 
   onMount(() => {
     socket = io(backend);
-  });
 
-  const handleSearch = () => {
-    if (locationToScrape !== "") {
-      locationToScrape = "";
-      error = "";
-      socket.emit("scrapeLocation", { url: locationToScrape });
-      socket.on("scrapeLocationError", (data) => {
-        error = data.error;
-      });
-    }
-  };
+    socket.on("image", (data) => {
+      if (data.image) {
+        const src = "data:image/jpeg;base64," + data.buffer;
+        images = [...images, { src, url: data.url }];
+      }
+    });
+  });
 </script>
 
 <main>
   <h1>Hi</h1>
-  <input type="text" bind:value={locationToScrape} />
-  <button on:click={handleSearch}>Search</button>
-  <div>{error}</div>
+  <Search {socket} />
+  {#each images as image (image.url)}
+    <img src={image.src} />
+  {/each}
 </main>
 
 <style>
