@@ -5,53 +5,75 @@ const getDomain = (location) => {
   return `${parts[parts.length - 2]}.${parts[parts.length - 1]}`;
 };
 
-const scrapeLinks = async (socket, page, location, visitedDomains) => {
-  try {
-    const thisLinkDomain = getDomain(location);
-    if (thisLinkDomain === null) throw new Error("Bad location");
+// remove the trailing "/"
+const standardizeUrl = (url) => {
+  if (url !== null && url.charAt(url.length - 1) === "/")
+    return url.substring(0, url.length - 1);
+  return url;
+};
 
-    visitedDomains.add(thisLinkDomain);
-    await page.setViewport({
-      width: 1920,
-      height: 1080,
-      deviceScaleFactor: 1,
-    });
-    await page.goto(location, {
-      waitUntil: "networkidle2",
-    });
-    // sometimes a url is a redirect, in which case we want to get the final url
-    const settledLocation = page.url();
-    const settledDomain = getDomain(settledLocation);
-    visitedDomains.add(settledDomain);
+const scrapeLinks = (
+  socket,
+  page,
+  parentLocation,
+  location,
+  visitedDomains
+) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const thisLinkDomain = getDomain(location);
+      if (thisLinkDomain === null) throw new Error("Bad location");
 
-    const buf = await page.screenshot({ encoding: "base64" });
-    // send the page screenshot to the client
-    socket.emit("image", {
-      image: true,
-      buffer: buf.toString("base64"),
-      url: settledLocation,
-    });
+      visitedDomains.add(thisLinkDomain);
+      await page.setViewport({
+        width: 1920,
+        height: 1080,
+        deviceScaleFactor: 1,
+      });
+      await page.goto(location, {
+        waitUntil: "networkidle2",
+      });
+      // sometimes a url is a redirect, in which case we want to get the final url
+      const settledLocation = page.url();
+      const settledDomain = getDomain(settledLocation);
+      visitedDomains.add(settledDomain);
 
-    // get all the links on the page
-    const hrefs = await page.$$eval("a", (links) =>
-      links.map((link) => link.href)
-    );
-    await page.close();
-    // filter out any links that are from the same site or any of the previous sites we've visited
-    const filteredHrefs = hrefs.filter((link) => {
-      const linkDomain = getDomain(link);
-      return (
-        linkDomain !== null &&
-        linkDomain !== thisLinkDomain &&
-        !visitedDomains.has(linkDomain)
+      const buf = await page.screenshot({ encoding: "base64" });
+
+      // get all the links on the page
+      const hrefs = await page.$$eval("a", (links) =>
+        links.map((link) => link.href)
       );
-    });
-    // remove dupes
-    return [...new Set(filteredHrefs)];
-  } catch {
-    // something went wrong
-    return [];
-  }
+      await page.close();
+      // filter out any links that are from the same site or any of the previous sites we've visited
+      const filteredHrefs = hrefs.filter((link) => {
+        const linkDomain = getDomain(link);
+        return (
+          linkDomain !== null &&
+          linkDomain !== thisLinkDomain &&
+          !visitedDomains.has(linkDomain)
+        );
+      });
+      // remove dupes
+      const finalHrefs = [...new Set(filteredHrefs)].map((href) =>
+        standardizeUrl(href)
+      );
+      console.log(finalHrefs);
+      // send the page screenshot and urls to the client
+      socket.emit("result", {
+        buffer: buf.toString("base64"),
+        url: standardizeUrl(settledLocation),
+        parentUrl: standardizeUrl(parentLocation),
+        links: finalHrefs,
+      });
+
+      resolve(finalHrefs);
+    } catch (e) {
+      console.error(e);
+      // something went wrong
+      resolve([]);
+    }
+  });
 };
 
 const maxDepth = 1;
@@ -59,6 +81,7 @@ const maxDepth = 1;
 const recursivelyScrape = async (
   socket,
   browser,
+  parentLocation,
   location,
   visitedDomains,
   depth
@@ -72,7 +95,13 @@ const recursivelyScrape = async (
 
     // scape the links from the page
     const page = await browser.newPage();
-    const links = await scrapeLinks(socket, page, location, visitedDomains);
+    const links = await scrapeLinks(
+      socket,
+      page,
+      parentLocation,
+      location,
+      visitedDomains
+    );
     console.log(`links from ${location}:`);
     console.log(links);
     console.log(`found ${links.length}`);
@@ -85,13 +114,20 @@ const recursivelyScrape = async (
       return recursivelyScrape(
         socket,
         browser,
+        location,
         link,
         visitedDomains,
         depth + 1
       );
     });
 
-    return await Promise.allSettled(scrapers);
+    await Promise.allSettled(scrapers);
+
+    if (depth === 0) {
+      console.log("complete");
+    }
+
+    return;
   }
 };
 

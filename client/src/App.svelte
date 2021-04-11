@@ -1,33 +1,51 @@
 <script>
   import { onMount } from "svelte";
-  import { io } from "socket.io-client";
+  import { socket } from "./stores/socket";
+  import { levels } from "./stores/levels";
   import Search from "./components/Search.svelte";
+  import LevelLayout from "./components/LevelLayout.svelte";
+  import Site from "./components/Site.svelte";
+  import FetchingLink from "./components/FetchingLink.svelte";
 
   export let backend;
 
-  let images = [];
-
-  let socket = { connected: false };
-
-  onMount(() => {
-    socket = io(backend);
-
-    socket.on("image", (data) => {
-      if (data.image) {
-        const src = "data:image/jpeg;base64," + data.buffer;
-        images = [...images, { src, url: data.url }];
-      }
-    });
+  onMount(async () => {
+    await socket.initialize(backend);
+    levels.subscribeToCrawler();
   });
 </script>
 
 <main>
-  <h1>Hi</h1>
-  <Search {socket} />
-  {#each images as image (image.url)}
-    <img src={image.src} />
+  {#each $levels.levels as level, index}
+    {#if index === 0 && level.length === 0 && $levels.fetching[0].length === 0}
+      <LevelLayout>
+        <!-- <h1>Link Explorer</h1> -->
+        <Search />
+      </LevelLayout>
+    {:else}
+      <LevelLayout title={`Level ${index}`}>
+        <div class="fetching-links">
+          {#each $levels.fetching[index] as url}
+            <FetchingLink {url} />
+          {/each}
+        </div>
+        {#each level as site (site.url)}
+          <Site {...site} />
+        {/each}
+      </LevelLayout>
+    {/if}
   {/each}
 </main>
 
 <style>
+  main {
+    justify-content: center;
+    display: flex;
+    width: auto;
+    min-height: 100vh;
+  }
+
+  .fetching-links {
+    margin-bottom: 25px;
+  }
 </style>

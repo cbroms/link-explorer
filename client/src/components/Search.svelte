@@ -1,22 +1,26 @@
 <script>
-  export let socket;
+  import { levels } from "../stores/levels";
 
   let locationToScrape = "";
   let error = "";
 
   const handleSearch = () => {
     if (locationToScrape !== "") {
-      socket.emit("scrapeLocation", { url: locationToScrape });
-      socket.on("scrapeLocationError", (data) => {
-        error = data.error;
-      });
+      levels.startCrawler(locationToScrape);
+      //   socket.emit("scrapeLocation", { url: locationToScrape });
+      //   socket.on("scrapeLocationError", (data) => {
+      //     error = data.error;
+      //   });
       locationToScrape = "";
-      error = "exploring links...";
     }
   };
 </script>
 
-<input type="text" bind:value={locationToScrape} />
+<input
+  type="text"
+  placeholder="https://example.com"
+  bind:value={locationToScrape}
+/>
 <button on:click={handleSearch}>Search</button>
 <div>{error}</div>
 

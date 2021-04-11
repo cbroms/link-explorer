@@ -24,7 +24,7 @@ io.on("connection", (socket) => {
     const visitedDomains = new Set();
     console.log(data.url);
     // the url is valid; start scraping
-    recursivelyScrape(socket, browser, data.url, visitedDomains, 0);
+    recursivelyScrape(socket, browser, null, data.url, visitedDomains, 0);
   });
 });
 
