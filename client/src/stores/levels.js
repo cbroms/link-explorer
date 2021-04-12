@@ -102,6 +102,24 @@ export const levels = createDerivedSocketStore(
             };
           });
         });
+
+        socket.on("resultFail", (data) => {
+          update((s) => {
+            const thisLevel =
+              data.parentUrl === null ? 0 : s.levelMap[data.parentUrl] + 1;
+
+            // removed the failed link from the fetching array
+            const newFetching = { ...s.fetching };
+            newFetching[thisLevel] = newFetching[thisLevel].filter(
+              (url) => url !== data.url
+            );
+
+            return {
+              ...s,
+              fetching: newFetching,
+            };
+          });
+        });
       };
     },
   },

@@ -19,7 +19,28 @@ const scrapeLinks = (
   location,
   visitedDomains
 ) => {
-  return new Promise(async (resolve, reject) => {
+  return new Promise(async (resolve) => {
+    let done = false;
+
+    // if we haven't completed in 45s, consider to have timed out and return
+    setTimeout(async () => {
+      if (!done) {
+        console.log("timeout", location);
+        // tell  the client we failed
+        socket.emit("resultFail", {
+          url: standardizeUrl(location),
+          parentUrl: standardizeUrl(parentLocation),
+        });
+        // try {
+        //   await page.close();
+        // } catch {
+        //   // if this fails for whatever reason it's fine
+        // }
+        resolve([]);
+      }
+    }, 45000);
+
+    // fetch the page, screenshot it, scrape links, clean links, and emit results
     try {
       const thisLinkDomain = getDomain(location);
       if (thisLinkDomain === null) throw new Error("Bad location");
@@ -54,10 +75,12 @@ const scrapeLinks = (
           !visitedDomains.has(linkDomain)
         );
       });
+
       // remove dupes
-      const finalHrefs = [...new Set(filteredHrefs)].map((href) =>
-        standardizeUrl(href)
-      );
+      let finalHrefs = [...new Set(filteredHrefs)];
+
+      finalHrefs = finalHrefs.map((href) => standardizeUrl(href));
+
       console.log(finalHrefs);
       // send the page screenshot and urls to the client
       socket.emit("result", {
@@ -68,10 +91,19 @@ const scrapeLinks = (
       });
 
       resolve(finalHrefs);
+      done = true;
     } catch (e) {
-      console.error(e);
       // something went wrong
+      console.error(e);
+
+      // tell  the client we failed
+      socket.emit("resultFail", {
+        url: standardizeUrl(location),
+        parentUrl: standardizeUrl(parentLocation),
+      });
+
       resolve([]);
+      done = true;
     }
   });
 };
@@ -88,46 +120,51 @@ const recursivelyScrape = async (
 ) => {
   if (depth > maxDepth) return;
   else {
-    const thisLocationDomain = getDomain(location);
-    if (thisLocationDomain === null) return;
+    try {
+      const thisLocationDomain = getDomain(location);
+      if (thisLocationDomain === null) throw new Error("Bad location");
 
-    console.log(`getting links from ${location}...`);
+      console.log(`getting links from ${location}...`);
 
-    // scape the links from the page
-    const page = await browser.newPage();
-    const links = await scrapeLinks(
-      socket,
-      page,
-      parentLocation,
-      location,
-      visitedDomains
-    );
-    console.log(`links from ${location}:`);
-    console.log(links);
-    console.log(`found ${links.length}`);
-
-    // don't return to this website
-    visitedDomains.add(thisLocationDomain);
-
-    // for each valid link, recursively scrape it
-    const scrapers = links.map((link) => {
-      return recursivelyScrape(
+      // scape the links from the page
+      const page = await browser.newPage();
+      const links = await scrapeLinks(
         socket,
-        browser,
+        page,
+        parentLocation,
         location,
-        link,
-        visitedDomains,
-        depth + 1
+        visitedDomains
       );
-    });
+      console.log(`links from ${location}:`);
+      console.log(links);
+      console.log(`found ${links.length}`);
 
-    await Promise.allSettled(scrapers);
+      // don't return to this website
+      visitedDomains.add(thisLocationDomain);
 
-    if (depth === 0) {
-      console.log("complete");
+      // for each valid link, recursively scrape it
+      const scrapers = links.map((link) => {
+        return recursivelyScrape(
+          socket,
+          browser,
+          location,
+          link,
+          visitedDomains,
+          depth + 1
+        );
+      });
+
+      // scrape the pages in parallel
+      await Promise.allSettled(scrapers);
+
+      if (depth === 0) {
+        console.log("complete");
+      }
+      return;
+    } catch (e) {
+      // the url could be bad
+      console.error(e);
     }
-
-    return;
   }
 };
 
