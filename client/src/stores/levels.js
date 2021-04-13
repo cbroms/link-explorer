@@ -1,8 +1,8 @@
 import { createDerivedSocketStore } from "./helpers/createDerivedSocketStore";
+import { cleanUrl } from "../helpers/cleanUrl";
 import { socket } from "./socket";
 
 const defaultState = {
-  currentlyScraping: {},
   levelMap: {}, // url to level number e.g. https://example.com -> 2
   levels: [[]],
   fetching: { 0: [] }, // level number to array of links being fetched
@@ -38,27 +38,12 @@ export const levels = createDerivedSocketStore(
         update((s) => {
           return {
             ...s,
-            currentlyScraping: { ...s.currentlyScraping, [url]: true },
-            levels: [...s.levels, []],
-            fetching: { ...s.fetching, 0: [url], 1: [] },
+            fetching: { ...s.fetching, 0: [cleanUrl(url)], 1: [] },
           };
         });
         socket.on("scrapeLocationError", (data) => {
           //TODO deal with this error
           error = data.error;
-        });
-        socket.on("scrapeLocationComplete", (data) => {
-          if (data.url === url) {
-            update((s) => {
-              return {
-                ...s,
-                currentlyScraping: {
-                  ...s.currentlyScraping,
-                  [data.url]: false,
-                },
-              };
-            });
-          }
         });
       };
     },
@@ -83,12 +68,14 @@ export const levels = createDerivedSocketStore(
 
             const newFetching = { ...s.fetching };
             if (thisLevel === 0) {
+              // add the next level
+              newLevels.push([]);
               // we got the OG, so add the list of things being fetched
-              newFetching[1] = data.links;
+              newFetching[1] = data.links.map((link) => cleanUrl(link));
             }
             // we've fetched the url, so remove it from the list of things being fetched
             newFetching[thisLevel] = newFetching[thisLevel].filter(
-              (url) => url !== data.url
+              (url) => url !== cleanUrl(data.url)
             );
 
             return {
@@ -111,7 +98,7 @@ export const levels = createDerivedSocketStore(
             // removed the failed link from the fetching array
             const newFetching = { ...s.fetching };
             newFetching[thisLevel] = newFetching[thisLevel].filter(
-              (url) => url !== data.url
+              (url) => url !== cleanUrl(data.url)
             );
 
             return {

@@ -6,7 +6,13 @@
 
   const handleSearch = () => {
     if (locationToScrape !== "") {
-      levels.startCrawler(locationToScrape);
+      try {
+        new URL(locationToScrape);
+        levels.startCrawler(locationToScrape);
+      } catch (e) {
+        error = "Invalid URL.";
+      }
+
       //   socket.emit("scrapeLocation", { url: locationToScrape });
       //   socket.on("scrapeLocationError", (data) => {
       //     error = data.error;
@@ -21,8 +27,12 @@
   placeholder="https://example.com"
   bind:value={locationToScrape}
 />
-<button on:click={handleSearch}>Search</button>
-<div>{error}</div>
+
+<button on:click={handleSearch}>Explore &rarr;</button>
+<div class="error">{error}</div>
 
 <style>
+  input {
+    margin-top: 40px;
+  }
 </style>

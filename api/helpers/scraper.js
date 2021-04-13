@@ -1,8 +1,7 @@
 const getDomain = (location) => {
-  const hostname = new URL(location).hostname;
+  const hostname = new URL(location).host;
   if (hostname === null || hostname === "") return null;
-  const parts = hostname.split(".");
-  return `${parts[parts.length - 2]}.${parts[parts.length - 1]}`;
+  return hostname;
 };
 
 // remove the trailing "/"

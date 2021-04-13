@@ -19,7 +19,8 @@
   {#each $levels.levels as level, index}
     {#if index === 0 && level.length === 0 && $levels.fetching[0].length === 0}
       <LevelLayout>
-        <!-- <h1>Link Explorer</h1> -->
+        <h1>Hyperfov</h1>
+        <h2>The hyperlink explorer.</h2>
         <Search />
       </LevelLayout>
     {:else}
@@ -47,5 +48,13 @@
 
   .fetching-links {
     margin-bottom: 25px;
+  }
+
+  h1 {
+    font-size: 5rem;
+    font-style: italic;
+    margin-bottom: 30px;
+    /* background-image: radial-gradient(rgb(27, 38, 133), black); */
+    /* box-shadow: 0px 0px 40px rgb(27, 38, 133); */
   }
 </style>
