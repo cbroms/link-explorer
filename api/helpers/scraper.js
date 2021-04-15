@@ -1,7 +1,8 @@
 const getDomain = (location) => {
-  const hostname = new URL(location).host;
+  const hostname = new URL(location).hostname;
   if (hostname === null || hostname === "") return null;
-  return hostname;
+  const parts = hostname.split(".");
+  return `${parts[parts.length - 2]}.${parts[parts.length - 1]}`;
 };
 
 // remove the trailing "/"
@@ -85,6 +86,7 @@ const scrapeLinks = (
       socket.emit("result", {
         buffer: buf.toString("base64"),
         url: standardizeUrl(settledLocation),
+        ogUrl: standardizeUrl(location),
         parentUrl: standardizeUrl(parentLocation),
         links: finalHrefs,
       });

@@ -31,7 +31,7 @@
           {/each}
         </div>
         {#each level as site (site.url)}
-          <Site {...site} />
+          <Site {...site} chosen={$levels.highlighted.includes(site.url)} />
         {/each}
       </LevelLayout>
     {/if}

@@ -5,5 +5,6 @@ export const cleanUrl = (url) => {
   if (url.charAt(url.length - 1) === "/")
     newUrl = url.substring(0, url.length - 1);
 
-  newUrl = newUrl.replace(/(^\w+:|^)\/\//, "");
+  //   newUrl = newUrl.replace(/(^\w+:|^)\/\//, "");
+  return newUrl;
 };

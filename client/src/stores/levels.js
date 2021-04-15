@@ -6,6 +6,7 @@ const defaultState = {
   levelMap: {}, // url to level number e.g. https://example.com -> 2
   levels: [[]],
   fetching: { 0: [] }, // level number to array of links being fetched
+  highlighted: [],
 };
 
 const fakeState = {
@@ -39,6 +40,7 @@ export const levels = createDerivedSocketStore(
           return {
             ...s,
             fetching: { ...s.fetching, 0: [cleanUrl(url)], 1: [] },
+            highlighted: [cleanUrl(url)],
           };
         });
         socket.on("scrapeLocationError", (data) => {
@@ -75,7 +77,7 @@ export const levels = createDerivedSocketStore(
             }
             // we've fetched the url, so remove it from the list of things being fetched
             newFetching[thisLevel] = newFetching[thisLevel].filter(
-              (url) => url !== cleanUrl(data.url)
+              (url) => url !== cleanUrl(data.ogUrl)
             );
 
             return {

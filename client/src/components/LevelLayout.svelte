@@ -1,8 +1,13 @@
 <script>
+  import { fly } from "svelte/transition";
+
   export let title = "";
 </script>
 
-<div>
+<div
+  in:fly={{ x: 300, duration: 800, delay: 400 }}
+  out:fly={{ x: -300, duration: 400 }}
+>
   <h3>{title}</h3>
   <slot />
 </div>
