@@ -39,13 +39,54 @@ export const levels = createDerivedSocketStore(
         update((s) => {
           return {
             ...s,
-            fetching: { ...s.fetching, 0: [cleanUrl(url)], 1: [] },
+            fetching: {
+              ...s.fetching,
+              0: [{ clean: cleanUrl(url), link: url }],
+              1: [],
+            },
             highlighted: [cleanUrl(url)],
           };
         });
         socket.on("scrapeLocationError", (data) => {
           //TODO deal with this error
           error = data.error;
+        });
+      };
+    },
+    continueCrawler: (parent, urls) => {
+      return (socket, update) => {
+        // since this is a continuation, we should already have the links for the location
+        console.log(parent, urls);
+        //  start scraping, passing in the parent
+        socket.emit("scrapeLocationContinue", { parent, urls });
+        update((s) => {
+          const thisLevel = s.levelMap[parent] + 1;
+
+          // add a new level if one hasn't already been added
+          const newLevels = [...s.levels];
+          if (newLevels.length - 1 === thisLevel - 1) newLevels.push([]);
+
+          // format links that are being fetched
+          // TODO display the links that aren't being fetched somewhere
+          const formattedFetchingUrls = urls.slice(0, 10).map((url) => {
+            return { clean: cleanUrl(url), link: url };
+          });
+
+          // add the urls to the list of things being fetched
+          const newFetchingLevel =
+            s.fetching[thisLevel] !== undefined
+              ? [...s.fetching[thisLevel], ...formattedFetchingUrls]
+              : [...formattedFetchingUrls];
+
+          return {
+            ...s,
+            fetching: {
+              ...s.fetching,
+              [thisLevel]: newFetchingLevel,
+            },
+            highlighted: [...s.highlighted, cleanUrl(parent)],
+            levels: newLevels,
+          };
         });
       };
     },
@@ -61,6 +102,8 @@ export const levels = createDerivedSocketStore(
             const thisLevel =
               data.parentUrl === null ? 0 : s.levelMap[data.parentUrl] + 1;
 
+            console.log(thisLevel);
+
             // add the site info to the levels array
             const newLevels = [...s.levels];
             newLevels[thisLevel] = [
@@ -73,11 +116,13 @@ export const levels = createDerivedSocketStore(
               // add the next level
               newLevels.push([]);
               // we got the OG, so add the list of things being fetched
-              newFetching[1] = data.links.map((link) => cleanUrl(link));
+              newFetching[1] = data.links.map((link) => {
+                return { clean: cleanUrl(link), link };
+              });
             }
             // we've fetched the url, so remove it from the list of things being fetched
             newFetching[thisLevel] = newFetching[thisLevel].filter(
-              (url) => url !== cleanUrl(data.ogUrl)
+              (url) => url.clean !== cleanUrl(data.ogUrl)
             );
 
             return {
@@ -100,7 +145,7 @@ export const levels = createDerivedSocketStore(
             // removed the failed link from the fetching array
             const newFetching = { ...s.fetching };
             newFetching[thisLevel] = newFetching[thisLevel].filter(
-              (url) => url !== cleanUrl(data.url)
+              (url) => url.clean !== cleanUrl(data.url)
             );
 
             return {

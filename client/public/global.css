@@ -62,7 +62,7 @@ input {
 }
 
 input:hover {
-  box-shadow: 0px 0px 40px rgb(43, 61, 219);
+  box-shadow: 0px 0px 40px rgba(230, 230, 230, 0.445);
 }
 
 input:focus {

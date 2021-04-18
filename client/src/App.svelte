@@ -2,6 +2,8 @@
   import { onMount } from "svelte";
   import { socket } from "./stores/socket";
   import { levels } from "./stores/levels";
+  import { cleanUrl } from "./helpers/cleanUrl";
+
   import Search from "./components/Search.svelte";
   import LevelLayout from "./components/LevelLayout.svelte";
   import Site from "./components/Site.svelte";
@@ -20,19 +22,25 @@
     {#if index === 0 && level.length === 0 && $levels.fetching[0].length === 0}
       <LevelLayout>
         <h1>Hyperfov</h1>
-        <h2>The hyperlink explorer.</h2>
+        <!-- <h2>The hyperlink explorer.</h2> -->
         <Search />
       </LevelLayout>
     {:else}
-      <LevelLayout title={`Level ${index}`}>
+      <LevelLayout title={`${index === 0 ? "Root" : "Level " + index}`}>
         <div class="fetching-links">
-          {#each $levels.fetching[index] as url}
-            <FetchingLink {url} />
+          {#each $levels.fetching[index] as fetch}
+            <FetchingLink url={fetch.link} />
           {/each}
         </div>
         {#each level as site (site.url)}
-          <Site {...site} chosen={$levels.highlighted.includes(site.url)} />
+          <Site
+            {...site}
+            chosen={$levels.highlighted.includes(cleanUrl(site.url))}
+          />
         {/each}
+        {#if level.length === 0 && $levels.fetching[index].length === 0}
+          <div>No links found.</div>
+        {/if}
       </LevelLayout>
     {/if}
   {/each}

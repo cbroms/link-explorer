@@ -15,9 +15,10 @@
 <style>
   div {
     padding: 20px;
+    min-width: 400px;
     width: 400px;
     height: 100vh;
     overflow-y: scroll;
-    border-left: 1px solid;
+    /* border-left: 1px solid; */
   }
 </style>

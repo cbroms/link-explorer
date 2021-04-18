@@ -1,10 +1,12 @@
 // remove anything variable from the url (protocol, trailing slash)
 export const cleanUrl = (url) => {
-  let newUrl = url;
+  let newUrl = new URL(url);
 
-  if (url.charAt(url.length - 1) === "/")
-    newUrl = url.substring(0, url.length - 1);
+  let cleaned = newUrl.hostname + newUrl.pathname;
+
+  if (cleaned.charAt(cleaned.length - 1) === "/")
+    cleaned = cleaned.substring(0, cleaned.length - 1);
 
   //   newUrl = newUrl.replace(/(^\w+:|^)\/\//, "");
-  return newUrl;
+  return cleaned;
 };

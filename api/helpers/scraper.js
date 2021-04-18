@@ -31,11 +31,11 @@ const scrapeLinks = (
           url: standardizeUrl(location),
           parentUrl: standardizeUrl(parentLocation),
         });
-        // try {
-        //   await page.close();
-        // } catch {
-        //   // if this fails for whatever reason it's fine
-        // }
+        try {
+          await page.close();
+        } catch {
+          // ok if this fails
+        }
         resolve([]);
       }
     }, 45000);
@@ -47,8 +47,8 @@ const scrapeLinks = (
 
       visitedDomains.add(thisLinkDomain);
       await page.setViewport({
-        width: 1920,
-        height: 1080,
+        width: 1080,
+        height: 720,
         deviceScaleFactor: 1,
       });
       await page.goto(location, {
@@ -97,6 +97,13 @@ const scrapeLinks = (
       // something went wrong
       console.error(e);
 
+      // attempt to close the page
+      try {
+        await page.close();
+      } catch {
+        // ok if this fails
+      }
+
       // tell  the client we failed
       socket.emit("resultFail", {
         url: standardizeUrl(location),
@@ -111,7 +118,7 @@ const scrapeLinks = (
 
 const maxDepth = 1;
 
-const recursivelyScrape = async (
+const scrape = async (
   socket,
   browser,
   parentLocation,
@@ -145,7 +152,7 @@ const recursivelyScrape = async (
 
       // for each valid link, recursively scrape it
       const scrapers = links.map((link) => {
-        return recursivelyScrape(
+        return scrape(
           socket,
           browser,
           location,
@@ -169,6 +176,23 @@ const recursivelyScrape = async (
   }
 };
 
+const scrapeList = async (
+  socket,
+  browser,
+  parentLocation,
+  locations,
+  visitedDomains
+) => {
+  // for each link given, recursively scrape it
+  const scrapers = locations.slice(0, 10).map((link) => {
+    return scrape(socket, browser, parentLocation, link, visitedDomains, 1);
+  });
+
+  // scrape the pages in parallel
+  await Promise.allSettled(scrapers);
+};
+
 module.exports = {
-  recursivelyScrape,
+  scrape,
+  scrapeList,
 };
