@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from "svelte";
+  import { afterUpdate, onMount } from "svelte";
   import { socket } from "./stores/socket";
   import { levels } from "./stores/levels";
   import { cleanUrl } from "./helpers/cleanUrl";
@@ -15,14 +15,19 @@
     await socket.initialize(backend);
     levels.subscribeToCrawler();
   });
+
+  afterUpdate(() => {
+    window.setTimeout(() => {
+      window.scrollBy({ top: 0, left: 400, behavior: "smooth" });
+    }, 300);
+  });
 </script>
 
-<main>
+<div class="main" style="width: {$levels.levels.length * 400}px;">
   {#each $levels.levels as level, index}
     {#if index === 0 && level.length === 0 && $levels.fetching[0].length === 0}
       <LevelLayout>
         <h1>Hyperfov</h1>
-        <!-- <h2>The hyperlink explorer.</h2> -->
         <Search />
       </LevelLayout>
     {:else}
@@ -44,14 +49,14 @@
       </LevelLayout>
     {/if}
   {/each}
-</main>
+</div>
 
 <style>
-  main {
+  .main {
     justify-content: center;
     display: flex;
-    width: auto;
     min-height: 100vh;
+    min-width: 100vw;
   }
 
   .fetching-links {

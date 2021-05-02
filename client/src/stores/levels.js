@@ -9,26 +9,6 @@ const defaultState = {
   highlighted: [],
 };
 
-const fakeState = {
-  levels: [[], []],
-  fetching: {
-    0: ["http://likelike.org"],
-    1: [
-      "https://likelike3d.herokuapp.com",
-      "https://likelike.glitch.me",
-      "https://twitter.com/likelikearcade",
-      "https://www.facebook.com/likelikearcade",
-      "http://likelike3d.herokuapp.com",
-      "https://twitch.tv/molleindustria",
-      "http://likeliketext.glitch.me",
-      "https://twitter.com/von_rostock/status/1222315759734534145",
-      "https://candle.itch.io/world-of-bitsy",
-      "http://jessestil.es",
-      "https://wordpress.org",
-    ],
-  },
-};
-
 export const levels = createDerivedSocketStore(
   socket,
   {
@@ -56,7 +36,7 @@ export const levels = createDerivedSocketStore(
     continueCrawler: (parent, urls) => {
       return (socket, update) => {
         // since this is a continuation, we should already have the links for the location
-        console.log(parent, urls);
+        // console.log(parent, urls);
         //  start scraping, passing in the parent
         socket.emit("scrapeLocationContinue", { parent, urls });
         update((s) => {
@@ -102,7 +82,7 @@ export const levels = createDerivedSocketStore(
             const thisLevel =
               data.parentUrl === null ? 0 : s.levelMap[data.parentUrl] + 1;
 
-            console.log(thisLevel);
+            // console.log(thisLevel);
 
             // add the site info to the levels array
             const newLevels = [...s.levels];
