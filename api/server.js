@@ -2,7 +2,7 @@ const puppeteer = require("puppeteer");
 const httpServer = require("http").createServer();
 const io = require("socket.io")(httpServer, {
   cors: {
-    origin: process.env.CLIENT,
+    origin: process.env.CLIENT || "http://localhost:5000",
     methods: ["GET", "POST"],
   },
 });
