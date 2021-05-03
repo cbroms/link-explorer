@@ -1,0 +1,20 @@
+version: "3"
+services:
+  client:
+    build:
+      context: .
+      dockerfile: ./client.Dockerfile
+      args:
+        - API=${API}
+    ports:
+      - "3003:5000"
+    working_dir: /client
+  server:
+    build:
+      context: .
+      dockerfile: ./server.Dockerfile
+      args:
+        - CLIENT=${CLIENT}
+    ports:
+      - "5004:3000"
+    working_dir: /api

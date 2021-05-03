@@ -2,7 +2,7 @@ const puppeteer = require("puppeteer");
 const httpServer = require("http").createServer();
 const io = require("socket.io")(httpServer, {
   cors: {
-    origin: "http://localhost:5000",
+    origin: process.env.CLIENT,
     methods: ["GET", "POST"],
   },
 });
@@ -58,7 +58,9 @@ io.on("connection", (socket) => {
 });
 
 (async () => {
-  browser = await puppeteer.launch();
+  browser = await puppeteer.launch({
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
   httpServer.listen(3000);
   console.log("server listening on port 3000");
   // await browser.close();
